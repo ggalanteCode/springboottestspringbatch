@@ -1,7 +1,5 @@
 package com.soprasteria.springboottestspringbatch.model;
 
-import java.util.List;
-
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -24,8 +22,8 @@ public class Employee {
 	
 	private String indirizzo;
 	
-	private String nomeTask;
+	private Integer idTask;
 	
-	private List<Task> tasks;
+	private String nomeTask;
 
 }

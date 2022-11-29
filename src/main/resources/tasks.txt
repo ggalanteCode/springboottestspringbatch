@@ -1,0 +1,4 @@
+1|sviluppare progetto spring batch
+2|sviluppare progetto kafka
+3|sviluppare progetto mongodb
+4|sviluppare rest api

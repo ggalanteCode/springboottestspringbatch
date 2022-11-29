@@ -16,6 +16,7 @@ public class SpringboottestspringbatchApplication implements CommandLineRunner {
 	@Autowired
 	private Job job;
 	
+	@Autowired
 	private JobLauncher jobLauncher;
 
 	public static void main(String[] args) {

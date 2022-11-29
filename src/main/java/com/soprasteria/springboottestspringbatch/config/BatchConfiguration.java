@@ -2,11 +2,11 @@ package com.soprasteria.springboottestspringbatch.config;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.DefaultBatchConfigurer;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.item.data.MongoItemReader;
 import org.springframework.batch.item.data.MongoItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
@@ -24,7 +24,7 @@ import com.soprasteria.springboottestspringbatch.processors.EmployeeProcessor;
 
 @Configuration
 @EnableBatchProcessing
-public class EmployeeBatchConfiguration {
+public class BatchConfiguration extends DefaultBatchConfigurer {
 	
 	@Autowired
 	private EmployeeProcessor employeeProcessor;
@@ -33,7 +33,7 @@ public class EmployeeBatchConfiguration {
 	private MongoTemplate mongoTemplate;
 	
 	@Autowired
-    public JobBuilderFactory jobBuilderFactory;
+	private JobBuilderFactory jobBuilderFactory;
 	
     @Autowired
     private StepBuilderFactory stepBuilderFactory;
@@ -45,7 +45,7 @@ public class EmployeeBatchConfiguration {
 		reader.setResource(new FileSystemResource("src\\main\\resources\\text.txt"));
 		reader.setLineMapper(new DefaultLineMapper<Employee>() {{
 			setLineTokenizer(new DelimitedLineTokenizer() {{
-				setNames(new String[] {"id", "nome", "eta", "indirizzo"});
+				setNames(new String[] {"id", "nome", "eta", "indirizzo", "idTask"});
 				setDelimiter("|");
 			}});
 			setFieldSetMapper(new BeanWrapperFieldSetMapper<Employee>() {{
@@ -55,13 +55,19 @@ public class EmployeeBatchConfiguration {
 		return reader;
 	}
 	
-	//LEGGIAMO DA MONGODB I TASK
 	@Bean
-	public MongoItemReader<Task> mongoDbTaskReader() {
-		MongoItemReader<Task> reader = new MongoItemReader<Task>();
-		reader.setTemplate(mongoTemplate);
-		reader.setCollection("tasks");
-		reader.setTargetType(Task.class);
+	public FlatFileItemReader<Task> txtFileTaskReader() {
+		FlatFileItemReader<Task> reader = new FlatFileItemReader<>();
+		reader.setResource(new FileSystemResource("src\\main\\resources\\tasks.txt"));
+		reader.setLineMapper(new DefaultLineMapper<Task>() {{
+			setLineTokenizer(new DelimitedLineTokenizer() {{
+				setNames(new String[] {"id", "nome"});
+				setDelimiter("|");
+			}});
+			setFieldSetMapper(new BeanWrapperFieldSetMapper<Task>() {{
+				setTargetType(Task.class);
+			}});
+		}});
 		return reader;
 	}
 	
@@ -75,8 +81,23 @@ public class EmployeeBatchConfiguration {
 	}
 	
 	@Bean
+	public MongoItemWriter<Task> mongoDbTaskWriter() {
+		MongoItemWriter<Task> writer = new MongoItemWriter<Task>();
+		writer.setTemplate(mongoTemplate);
+		writer.setCollection("tasks");
+		return writer;
+	}
+	
 	public Step step() {
-		return stepBuilderFactory.get("step1").<Employee, Employee>chunk(2)
+		return stepBuilderFactory.get("step1").<Task, Task>chunk(2)
+				.reader(txtFileTaskReader())
+				.writer(mongoDbTaskWriter())
+				.build();
+	}
+	
+	@Bean
+	public Step step2() {
+		return stepBuilderFactory.get("step2").<Employee, Employee>chunk(2)
 				.reader(txtFileEmployeeReader())
 				.processor(employeeProcessor)
 				.writer(mongoDbEmployeeWriter())
@@ -88,6 +109,7 @@ public class EmployeeBatchConfiguration {
 		return jobBuilderFactory.get("job")
 				.incrementer(new RunIdIncrementer())
 				.start(step())
+				.next(step2())
 				.build();
 	}
 
