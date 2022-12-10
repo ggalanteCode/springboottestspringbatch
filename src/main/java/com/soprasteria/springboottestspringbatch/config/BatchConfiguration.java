@@ -87,7 +87,7 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 		writer.setCollection("tasks");
 		return writer;
 	}
-	
+
 	public Step step() {
 		return stepBuilderFactory.get("step1").<Task, Task>chunk(2)
 				.reader(txtFileTaskReader())
